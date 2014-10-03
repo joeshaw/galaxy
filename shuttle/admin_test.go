@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -351,7 +352,6 @@ func (s *HTTPSuite) TestAddRemoveBackends(c *C) {
 		c.Errorf("we should have 1 service, we have %d", len(cfg))
 		c.Errorf("we should have 3 backends, we have %d", len(cfg[0].Backends))
 	}
-
 }
 
 func (s *HTTPSuite) TestHTTPAddRemoveBackends(c *C) {
@@ -416,6 +416,8 @@ func (s *HTTPSuite) TestHTTPAddRemoveBackends(c *C) {
 		c.Errorf("we should have 1 service, we have %d", len(cfg))
 		c.Errorf("we should have 3 backends, we have %d", len(cfg[0].Backends))
 	}
+
+	fmt.Printf("%+v\n", activeConns.List())
 }
 
 func (s *HTTPSuite) TestErrorPage(c *C) {

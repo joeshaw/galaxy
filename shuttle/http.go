@@ -229,6 +229,7 @@ func NewErrorResponse(pages map[string][]int) *ErrorResponse {
 				Timeout: 2 * time.Second,
 			}).Dial,
 			TLSHandshakeTimeout: 2 * time.Second,
+			DisableKeepAlives:   true,
 		},
 		Timeout: 5 * time.Second,
 	}

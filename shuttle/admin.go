@@ -26,6 +26,20 @@ func getStats(w http.ResponseWriter, r *http.Request) {
 	w.Write(marshal(Registry.Stats()))
 }
 
+// misc debug info
+func debugHandler(w http.ResponseWriter, r *http.Request) {
+	ac := activeConns.List()
+	js, err := json.MarshalIndent(&ac, "", "  ")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	js = append(js, '\n')
+	w.Write(js)
+}
+
 func getService(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
@@ -166,6 +180,7 @@ func addHandlers() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", getStats).Methods("GET")
 	r.HandleFunc("/_config", getConfig).Methods("GET")
+	r.HandleFunc("/_debug", debugHandler).Methods("GET")
 	r.HandleFunc("/{service}", getService).Methods("GET")
 	r.HandleFunc("/{service}", postService).Methods("PUT", "POST")
 	r.HandleFunc("/{service}", deleteService).Methods("DELETE")

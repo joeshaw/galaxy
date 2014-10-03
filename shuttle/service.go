@@ -356,13 +356,13 @@ func (s *Service) Dial(nw, addr string) (net.Conn, error) {
 		return nil, DialError{err}
 	}
 
-	conn := &shuttleConn{
-		TCPConn:   srvConn.(*net.TCPConn),
-		rwTimeout: s.ServerTimeout,
-		written:   &backend.Sent,
-		read:      &backend.Rcvd,
-		connected: &backend.HTTPActive,
-	}
+	conn := NewConn(
+		srvConn.(*net.TCPConn),
+		s.ServerTimeout,
+		&backend.Sent,
+		&backend.Rcvd,
+		&backend.HTTPActive,
+	)
 
 	atomic.AddInt64(&backend.Conns, 1)
 
@@ -463,12 +463,13 @@ func (l *timeoutListener) Accept() (net.Conn, error) {
 
 	c, ok := conn.(*net.TCPConn)
 	if ok {
-		tc := &shuttleConn{
-			TCPConn:   c,
-			rwTimeout: l.rwTimeout,
-			read:      &l.read,
-			written:   &l.written,
-		}
+		tc := NewConn(
+			c,
+			l.rwTimeout,
+			&l.read,
+			&l.written,
+			nil,
+		)
 		return tc, nil
 	}
 	return conn, nil

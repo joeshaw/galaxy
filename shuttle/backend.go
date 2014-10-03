@@ -208,12 +208,13 @@ func (b *Backend) Proxy(srvConn, cliConn net.Conn) {
 	// but all updates will be done atomically.
 
 	// TODO: might not be TCP? (this would panic)
-	bConn := &shuttleConn{
-		TCPConn:   srvConn.(*net.TCPConn),
-		rwTimeout: b.rwTimeout,
-		read:      &b.Rcvd,
-		written:   &b.Sent,
-	}
+	bConn := NewConn(
+		srvConn.(*net.TCPConn),
+		b.rwTimeout,
+		&b.Rcvd,
+		&b.Sent,
+		nil,
+	)
 	// TODO: No way to force shutdown. Do we need it, or should we always just
 	// let a connection run out?
 
@@ -263,55 +264,3 @@ func broker(dst, src net.Conn, srcClosed chan bool, written, errors *int64) {
 	}
 	srcClosed <- true
 }
-
-// A net.Conn that sets a deadline for every read or write operation.
-// This will allow the server to close connections that are broken at the
-// network level.
-type shuttleConn struct {
-	*net.TCPConn
-	rwTimeout time.Duration
-
-	// count bytes read and written through this connection
-	written *int64
-	read    *int64
-
-	// decrement when closed
-	connected *int64
-}
-
-func (c *shuttleConn) Read(b []byte) (int, error) {
-	if c.rwTimeout > 0 {
-		err := c.TCPConn.SetReadDeadline(time.Now().Add(c.rwTimeout))
-		if err != nil {
-			return 0, err
-		}
-	}
-	n, err := c.TCPConn.Read(b)
-	atomic.AddInt64(c.read, int64(n))
-	return n, err
-}
-
-func (c *shuttleConn) Write(b []byte) (int, error) {
-	if c.rwTimeout > 0 {
-		err := c.TCPConn.SetWriteDeadline(time.Now().Add(c.rwTimeout))
-		if err != nil {
-			return 0, err
-		}
-	}
-
-	n, err := c.TCPConn.Write(b)
-	atomic.AddInt64(c.written, int64(n))
-	return n, err
-}
-
-func (c *shuttleConn) Close() error {
-	if c.connected != nil {
-		atomic.AddInt64(c.connected, -1)
-	}
-	return c.TCPConn.Close()
-}
-
-// Empty function to override the ReadFrom in *net.TCPConn
-// io.Copy will attempt to use ReadFrom when it can, but there's no bennefit
-// for a TCPConn, and it prevents us from collecting Read/Write stats.
-func (c *shuttleConn) ReadFrom() {}
